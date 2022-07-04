@@ -1,0 +1,20 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{html,htm,css,js}]
+indent_style = space
+indent_size = 2
+charset = utf-8
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{cmd,[cC][mM][dD]}]
+end_of_line = crlf
+
+[*.{bat,[bB][aA][tT]}]
+end_of_line = crlf
