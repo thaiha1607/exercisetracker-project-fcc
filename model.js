@@ -1,5 +1,8 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
+'use strict';
+import * as dotenv from 'dotenv';
+import mongoose from 'mongoose';
+dotenv.config();
+
 mongoose.connect(process.env.MONGO_URI, (err) => {
   if (err) {
     console.log(err);
@@ -20,7 +23,19 @@ const userSchema = new Schema({
   ],
 });
 
-class UserModel {
+export async function isValidDate(dateString) {
+  if (!dateString) {
+    return undefined;
+  }
+  let regEx = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateString.match(regEx)) return false;
+  let dateObj = new Date(dateString);
+  let dateObjNum = dateObj.getTime();
+  if (!dateObjNum && dateObjNum !== 0) return false;
+  return dateObj.toISOString().slice(0, 10) === dateString;
+}
+
+export class UserModel {
   constructor() {
     this.User = mongoose.model('User', userSchema);
   }
@@ -39,9 +54,11 @@ class UserModel {
    * Get all users and return list of them
    */
   async allUsers() {
-    const users = await this.User.find({}).catch((err) => {
-      throw err;
-    });
+    const users = await this.User.find({})
+      .exec()
+      .catch((err) => {
+        throw err;
+      });
     return users.map((user) => {
       return { username: user.username, _id: user.id };
     });
@@ -51,9 +68,11 @@ class UserModel {
    * @param {string} id
    */
   async findUserById(id) {
-    const user = await this.User.findById(id).catch((err) => {
-      throw err;
-    });
+    const user = await this.User.findById(id)
+      .exec()
+      .catch((err) => {
+        throw err;
+      });
     if (user === null) {
       throw new Error('User not found');
     }
@@ -81,19 +100,19 @@ class UserModel {
       username: user.username,
       description,
       duration,
-      date: user.date.toDateString(),
+      date: !date ? new Date().toDateString() : new Date(date).toDateString(),
       _id: user.id,
     };
   }
   /**
-   * Get exercises of specific user
+   * Get user logs
    * @param {string} id
    * @param {{ from?: string; to?: string; limit?: number }} param1
    */
-  async getExercises(id, { from, to, limit }) {
+  async getUserLogs(id, { from, to, limit }) {
     let user;
     try {
-      user = await this.findUserById(id);
+      user = await this.findUserById(id).exec();
     } catch (err) {
       throw err;
     }
@@ -116,7 +135,7 @@ class UserModel {
       .map((exercise) => {
         return {
           ...exercise,
-          date: exercise.date.toDateString(),
+          date: new Date(exercise.date).toDateString(),
         };
       });
     return {
@@ -130,5 +149,3 @@ class UserModel {
     };
   }
 }
-
-exports.UserModel = UserModel;
