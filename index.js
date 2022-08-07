@@ -68,7 +68,7 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
   try {
     const user = await UserObj.addExercise(_id, {
       description,
-      duration,
+      duration: parseFloat(duration),
       date,
     });
     res.status(201).json(user);

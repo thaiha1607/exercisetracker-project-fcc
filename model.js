@@ -76,7 +76,7 @@ export class UserModel {
     const dateObj = !date
       ? new Date().toDateString()
       : new Date(date).toDateString();
-    const user = this.User.findByIdAndUpdate(
+    const user = await this.User.findByIdAndUpdate(
       id,
       {
         $push: {
