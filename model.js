@@ -18,7 +18,7 @@ const userSchema = new Schema({
     {
       description: { type: String, required: true },
       duration: { type: Number, required: true },
-      date: { type: Date, default: Date.now },
+      date: { type: Date, required: true },
     },
   ],
 });
@@ -33,6 +33,10 @@ export async function isValidDate(dateString) {
   let dateObjNum = dateObj.getTime();
   if (!dateObjNum && dateObjNum !== 0) return false;
   return dateObj.toISOString().slice(0, 10) === dateString;
+}
+
+export async function isValidID(id) {
+  return !!id && !!id.match(/^[0-9a-fA-F]{24}$/);
 }
 
 export class UserModel {
@@ -64,43 +68,36 @@ export class UserModel {
     });
   }
   /**
-   * Find user by id and return it
-   * @param {string} id
-   */
-  async findUserById(id) {
-    const user = await this.User.findById(id)
-      .exec()
-      .catch((err) => {
-        throw err;
-      });
-    if (user === null) {
-      throw new Error('User not found');
-    }
-    return user;
-  }
-  /**
    * Add exercise to specific user
    * @param {string} id
    * @param {{ description: string; duration: number; date?: string }} param1
    */
   async addExercise(id, { description, duration, date }) {
-    let user;
-    try {
-      user = await this.findUserById(id);
-    } catch (err) {
-      throw err;
-    }
-    if (date === undefined) {
-      user.exercises.push({ description, duration });
-    } else user.exercises.push({ description, duration, date });
-    await user.save().catch((err) => {
-      throw err;
-    });
+    const dateObj = !date
+      ? new Date().toDateString()
+      : new Date(date).toDateString();
+    const user = this.User.findByIdAndUpdate(
+      id,
+      {
+        $push: {
+          exercises: {
+            description,
+            duration,
+            date: dateObj,
+          },
+        },
+      },
+      { new: true }
+    )
+      .exec()
+      .catch((err) => {
+        throw err;
+      });
     return {
       username: user.username,
       description,
       duration,
-      date: !date ? new Date().toDateString() : new Date(date).toDateString(),
+      date: dateObj,
       _id: user.id,
     };
   }
@@ -110,11 +107,14 @@ export class UserModel {
    * @param {{ from?: string; to?: string; limit?: number }} param1
    */
   async getUserLogs(id, { from, to, limit }) {
-    let user;
-    try {
-      user = await this.findUserById(id).exec();
-    } catch (err) {
-      throw err;
+    const user = await this.User.findById(id)
+      .lean()
+      .exec()
+      .catch((err) => {
+        throw err;
+      });
+    if (user === null) {
+      throw new Error('User not found');
     }
     const log = user.exercises;
     const filteredLog = log
@@ -135,7 +135,7 @@ export class UserModel {
       .map((exercise) => {
         return {
           ...exercise,
-          date: new Date(exercise.date).toDateString(),
+          date: exercise.date.toDateString(),
         };
       });
     return {

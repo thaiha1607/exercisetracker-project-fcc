@@ -13,12 +13,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import { isValidDate, UserModel } from './model.js';
+import { isValidDate, isValidID, UserModel } from './model.js';
 const UserObj = new UserModel();
 
-app.use(function (err, req, res, next) {
-  res.status(500).send('Internal Server Error');
-});
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -42,6 +39,7 @@ app
     const { username } = req.body;
     if (!username) {
       res.status(400).send('Username is required');
+      return;
     }
     try {
       const user = await UserObj.createNewUser(username);
@@ -55,9 +53,7 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
   const { _id } = req.params;
   const { description, duration, date } = req.body;
   const isValidFields = await Promise.all([
-    (async (id) => {
-      return !!id && !!id.match(/^[0-9a-fA-F]{24}$/);
-    })(_id),
+    isValidID(_id),
     (async (desc) => !!desc)(description),
     (async (dur) => {
       let result = parseFloat(dur);
@@ -67,6 +63,7 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
   ]);
   if (!isValidFields.every((x) => (x === undefined ? true : x))) {
     res.status(400).send('Invalid request');
+    return;
   }
   try {
     const user = await UserObj.addExercise(_id, {
@@ -86,9 +83,7 @@ app.get('/api/users/:_id/logs', async (req, res, next) => {
   const { _id } = req.params;
   const { from, to, limit } = req.query;
   const isValidFields = await Promise.all([
-    (async (id) => {
-      return !!id && !!id.match(/^[0-9a-fA-F]{24}$/);
-    })(_id),
+    isValidID(_id),
     (async (lim) => {
       if (lim === undefined) return undefined;
       let result = parseInt(lim);
@@ -99,6 +94,7 @@ app.get('/api/users/:_id/logs', async (req, res, next) => {
   ]);
   if (!isValidFields.every((x) => (x === undefined ? true : x))) {
     res.status(400).send('Invalid request');
+    return;
   }
   try {
     const user = await UserObj.getUserLogs(_id, { from, to, limit });
@@ -108,6 +104,11 @@ app.get('/api/users/:_id/logs', async (req, res, next) => {
       res.status(404).json({ message: 'User not found' });
     } else next(err);
   }
+});
+
+app.use(function (err, req, res, next) {
+  console.error(err.stack);
+  res.status(500).send('Internal Server Error');
 });
 
 const PORT = process.env.PORT || 3000;
