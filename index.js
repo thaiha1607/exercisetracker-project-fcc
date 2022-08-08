@@ -74,7 +74,7 @@ app.post('/api/users/:_id/exercises', async (req, res, next) => {
     res.status(201).json(user);
   } catch (err) {
     if (err.message === 'User not found') {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: err.message });
     } else next(err);
   }
 });
@@ -97,11 +97,15 @@ app.get('/api/users/:_id/logs', async (req, res, next) => {
     return;
   }
   try {
-    const user = await UserObj.getUserLogs(_id, { from, to, limit });
+    const user = await UserObj.getUserLogs(_id, {
+      from,
+      to,
+      limit: limit ? parseInt(limit) : undefined,
+    });
     res.status(200).json(user);
   } catch (err) {
     if (err.message === 'User not found') {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: err.message });
     } else next(err);
   }
 });
@@ -112,6 +116,6 @@ app.use(function (err, req, res, next) {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT || 3000, () => {
+app.listen(PORT, () => {
   console.log('Your app is listening on port ' + PORT);
 });

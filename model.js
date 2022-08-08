@@ -23,6 +23,10 @@ const userSchema = new Schema({
   ],
 });
 
+/**
+ * Check if the given date is valid
+ * @param {string?} dateString
+ */
 export async function isValidDate(dateString) {
   if (!dateString) {
     return undefined;
@@ -35,6 +39,10 @@ export async function isValidDate(dateString) {
   return dateObj.toISOString().slice(0, 10) === dateString;
 }
 
+/**
+ * Check if the given ID is valid
+ * @param {string} id
+ */
 export async function isValidID(id) {
   return !!id && !!id.match(/^[0-9a-fA-F]{24}$/);
 }
@@ -59,12 +67,13 @@ export class UserModel {
    */
   async allUsers() {
     const users = await this.User.find({})
+      .lean()
       .exec()
       .catch((err) => {
         throw err;
       });
     return users.map((user) => {
-      return { username: user.username, _id: user.id };
+      return { username: user.username, _id: user._id };
     });
   }
   /**
@@ -89,16 +98,20 @@ export class UserModel {
       },
       { new: true }
     )
+      .lean()
       .exec()
       .catch((err) => {
         throw err;
       });
+    if (user === null) {
+      throw new Error('User not found');
+    }
     return {
       username: user.username,
       description,
       duration,
       date: dateObj,
-      _id: user.id,
+      _id: user._id,
     };
   }
   /**
@@ -141,7 +154,7 @@ export class UserModel {
     return {
       username: user.username,
       count: filteredLog.length,
-      _id: user.id,
+      _id: user._id,
       log: filteredLog,
       ...(from && { from }),
       ...(to && { to }),
